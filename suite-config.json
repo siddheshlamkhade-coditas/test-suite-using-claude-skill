@@ -1,0 +1,438 @@
+{
+  "configVersion": 1,
+  "project": {
+    "groupId": "com.petstore",
+    "artifactId": "petstore-api-tests",
+    "projectName": "Swagger Petstore API Tests",
+    "basePackage": "com.petstore.api",
+    "javaVersion": 17,
+    "outDir": "."
+  },
+  "contract": {
+    "source": "https://petstore3.swagger.io/api/v3/openapi.json",
+    "ingestDir": ".api-forge",
+    "format": "openapi3",
+    "specDigest": "",
+    "endpointsDigest": "sha256:5ec576f73b7e2783",
+    "schemaOverrides": {}
+  },
+  "environment": {
+    "name": "qa",
+    "baseUrl": "https://petstore3.swagger.io/api/v3",
+    "baseUrlNote": "The only server the spec declares.",
+    "parallel": false,
+    "parallelDisabledReason": "The pet, order and user lifecycles each chain an id/username from a create response through to a delete via SharedValues, which is per-thread: parallel classes would put producer and consumer on different threads and the consumer would read null, intermittently. Not a request-spec problem; ApiClient returns a fresh spec per call.",
+    "headerProfiles": {
+      "standard": {
+        "javadoc": "Headers this contract's security schemes declare. The public demo server does not enforce either, but both are sent when configured so the suite is ready for a real deployment.",
+        "headers": [],
+        "optional": [
+          { "name": "Authorization", "cfgKey": "auth.bearerHeaderValue" },
+          { "name": "api_key", "cfgKey": "auth.apiKey" }
+        ]
+      }
+    },
+    "configKeys": [
+      {
+        "key": "auth.bearerHeaderValue",
+        "value": "",
+        "secret": true,
+        "envVar": "PETSTORE_BEARER_HEADER",
+        "note": "Full Authorization header value including the scheme, e.g. 'Bearer <token>'. The spec declares petstore_auth (oauth2) but has no token endpoint and the demo server does not enforce it, so this is blank by default and the header is simply not sent."
+      },
+      {
+        "key": "auth.apiKey",
+        "value": "",
+        "secret": true,
+        "envVar": "PETSTORE_API_KEY",
+        "note": "Value for the api_key header the spec declares on GET /pet/{petId} and DELETE /pet/{petId}. Blank by default since the demo server does not enforce it."
+      },
+      {
+        "key": "user.password",
+        "value": "qa-test-pass-1",
+        "secret": false,
+        "note": "Password used for the synthesized test user and the login/logout flow. Not a real credential -- this demo API does not validate passwords."
+      }
+    ]
+  },
+  "auth": {
+    "mode": "none"
+  },
+  "report": {
+    "enabled": true,
+    "engine": "extent",
+    "path": "target/api-report/index.html",
+    "logPath": "target/api-suite.log",
+    "title": "Swagger Petstore API Tests",
+    "name": "Petstore API suite",
+    "maxBodyBytes": 4000
+  },
+  "pojos": {
+    "NewPetRequest": {
+      "javadoc": "Body for POST /pet and PUT /pet. The spec carries no example, so these values are synthesized -- verify before relying on them.",
+      "domain": "pet",
+      "sourceOperations": ["addPet", "updatePet"],
+      "fields": [
+        { "name": "name", "javaType": "String", "sampleValue": "doggie" },
+        { "name": "category", "javaType": "java.util.Map<String,Object>", "sampleValue": { "id": 1, "name": "Dogs" } },
+        { "name": "photoUrls", "javaType": "java.util.List<String>", "sampleValue": ["https://example.com/photo.jpg"] },
+        { "name": "tags", "javaType": "java.util.List<java.util.Map<String,Object>>", "sampleValue": [{ "id": 1, "name": "forged" }] },
+        { "name": "status", "javaType": "String", "sampleValue": "available" }
+      ]
+    },
+    "UpdatePetRequest": {
+      "javadoc": "Body for PUT /pet, reusing the id the lifecycle created so the update targets that same pet.",
+      "domain": "pet",
+      "sourceOperations": ["updatePet"],
+      "fields": [
+        { "name": "id", "javaType": "long", "sampleValue": 0 },
+        { "name": "name", "javaType": "String", "sampleValue": "doggie-renamed" },
+        { "name": "category", "javaType": "java.util.Map<String,Object>", "sampleValue": { "id": 1, "name": "Dogs" } },
+        { "name": "photoUrls", "javaType": "java.util.List<String>", "sampleValue": ["https://example.com/photo.jpg"] },
+        { "name": "tags", "javaType": "java.util.List<java.util.Map<String,Object>>", "sampleValue": [{ "id": 1, "name": "forged" }] },
+        { "name": "status", "javaType": "String", "sampleValue": "sold" }
+      ]
+    },
+    "NewOrderRequest": {
+      "javadoc": "Body for POST /store/order. The spec carries no example, so these values are synthesized -- verify before relying on them.",
+      "domain": "store",
+      "sourceOperations": ["placeOrder"],
+      "fields": [
+        { "name": "petId", "javaType": "long", "sampleValue": 198772 },
+        { "name": "quantity", "javaType": "Integer", "sampleValue": 1 },
+        { "name": "shipDate", "javaType": "String", "sampleValue": "1970-01-01T00:00:00.000Z" },
+        { "name": "status", "javaType": "String", "sampleValue": "placed" },
+        { "name": "complete", "javaType": "Boolean", "sampleValue": false }
+      ]
+    },
+    "NewUserRequest": {
+      "javadoc": "Body for POST /user. username is generated fresh per run (this is a shared public demo server) so the create never collides with another run.",
+      "domain": "user",
+      "sourceOperations": ["createUser"],
+      "fields": [
+        { "name": "username", "javaType": "String", "sampleValue": "qa-user-{{uuid}}" },
+        { "name": "firstName", "javaType": "String", "sampleValue": "QA" },
+        { "name": "lastName", "javaType": "String", "sampleValue": "Forge" },
+        { "name": "email", "javaType": "String", "sampleValue": "qa-forge-{{uuid}}@example.com" },
+        { "name": "password", "javaType": "String", "sampleValue": "{{cfg:user.password}}" },
+        { "name": "phone", "javaType": "String", "sampleValue": "555-0100" },
+        { "name": "userStatus", "javaType": "Integer", "sampleValue": 1 }
+      ]
+    },
+    "UpdateUserRequest": {
+      "javadoc": "Body for PUT /user/{username}, reusing the username the lifecycle created.",
+      "domain": "user",
+      "sourceOperations": ["updateUser"],
+      "fields": [
+        { "name": "username", "javaType": "String", "sampleValue": "placeholder" },
+        { "name": "firstName", "javaType": "String", "sampleValue": "QA" },
+        { "name": "lastName", "javaType": "String", "sampleValue": "Forge-Updated" },
+        { "name": "email", "javaType": "String", "sampleValue": "qa-forge-updated@example.com" },
+        { "name": "password", "javaType": "String", "sampleValue": "{{cfg:user.password}}" },
+        { "name": "phone", "javaType": "String", "sampleValue": "555-0101" },
+        { "name": "userStatus", "javaType": "Integer", "sampleValue": 1 }
+      ]
+    },
+    "NewUserListRequest": {
+      "javadoc": "Body for POST /user/createWithList. Independent of the user lifecycle -- its own disposable usernames.",
+      "domain": "user",
+      "sourceOperations": ["createUsersWithListInput"],
+      "fields": []
+    }
+  },
+  "tagClasses": [
+    {
+      "className": "PetReads",
+      "description": "Pet search operations that do not depend on a specific pet.",
+      "tag": "pet",
+      "tests": [
+        {
+          "description": "GET /pet/findByStatus?status=available",
+          "methodName": "findByStatusAvailable",
+          "operationId": "findPetsByStatus",
+          "expectedStatus": 200,
+          "groups": ["smoke", "api", "pet"],
+          "spec": "spec",
+          "request": { "queryParams": { "status": "available" } }
+        },
+        {
+          "description": "GET /pet/findByTags?tags=string",
+          "methodName": "findByTagsString",
+          "operationId": "findPetsByTags",
+          "expectedStatus": 200,
+          "groups": ["api", "pet"],
+          "spec": "spec",
+          "request": { "queryParams": { "tags": "string" } }
+        }
+      ]
+    },
+    {
+      "className": "StoreReads",
+      "description": "Store operations that do not depend on a specific order.",
+      "tag": "store",
+      "tests": [
+        {
+          "description": "GET /store/inventory",
+          "methodName": "getInventory",
+          "operationId": "getInventory",
+          "expectedStatus": 200,
+          "groups": ["smoke", "api", "store"],
+          "spec": "spec",
+          "assertions": [{ "jsonPath": "$", "operator": "notNull" }]
+        }
+      ]
+    },
+    {
+      "className": "UserBulkCreate",
+      "description": "User creation that does not participate in the single-user lifecycle.",
+      "tag": "user",
+      "tests": [
+        {
+          "description": "POST /user/createWithList",
+          "methodName": "createUsersWithList",
+          "operationId": "createUsersWithListInput",
+          "expectedStatus": 200,
+          "groups": ["api", "user"],
+          "spec": "spec",
+          "request": { "pojo": "NewUserListRequest" }
+        }
+      ]
+    }
+  ],
+  "sequences": [
+    {
+      "name": "pet-lifecycle",
+      "className": "PetLifecycle",
+      "description": "create -> fetch -> update (full body) -> update (form fields) -> upload image -> delete. The id is chained from the create response, not hardcoded, so the flow is safe to re-run against the shared demo server.",
+      "destructive": true,
+      "steps": [
+        {
+          "stepId": "p1",
+          "methodName": "createPet",
+          "operationId": "addPet",
+          "domain": "pet",
+          "description": "POST /pet creates the pet the rest of the flow uses",
+          "expectedStatus": 200,
+          "destructive": true,
+          "groups": ["smoke", "workflow", "pet"],
+          "spec": "spec",
+          "request": { "pojo": "NewPetRequest" },
+          "assertions": [{ "jsonPath": "id", "operator": "notNull" }, { "jsonPath": "name", "operator": "equals", "expected": "doggie" }],
+          "extract": [{ "variable": "petId", "kind": "body", "expr": "id", "javaType": "Long" }]
+        },
+        {
+          "stepId": "p2",
+          "methodName": "fetchPet",
+          "operationId": "getPetById",
+          "domain": "pet",
+          "description": "GET /pet/{petId} reads back what create returned",
+          "expectedStatus": 200,
+          "dependsOn": ["p1"],
+          "groups": ["smoke", "workflow", "pet"],
+          "spec": "spec",
+          "request": { "pathParams": { "petId": "{{petId}}" } },
+          "assertions": [{ "jsonPath": "id", "operator": "equals", "expected": "{{petId}}" }]
+        },
+        {
+          "stepId": "p3",
+          "methodName": "updatePetFull",
+          "operationId": "updatePet",
+          "domain": "pet",
+          "description": "PUT /pet renames the pet and marks it sold, reusing the created id",
+          "expectedStatus": 200,
+          "dependsOn": ["p2"],
+          "destructive": true,
+          "groups": ["workflow", "pet"],
+          "spec": "spec",
+          "request": { "pojo": "UpdatePetRequest", "body": { "id": "{{petId}}" } },
+          "assertions": [{ "jsonPath": "status", "operator": "equals", "expected": "sold" }]
+        },
+        {
+          "stepId": "p4",
+          "methodName": "updatePetForm",
+          "operationId": "updatePetWithForm",
+          "domain": "pet",
+          "description": "POST /pet/{petId} updates name/status via form fields",
+          "expectedStatus": 200,
+          "dependsOn": ["p3"],
+          "destructive": true,
+          "groups": ["workflow", "pet"],
+          "spec": "spec",
+          "request": { "pathParams": { "petId": "{{petId}}" }, "queryParams": { "name": "doggie-form-updated", "status": "pending" } }
+        },
+        {
+          "stepId": "p5",
+          "methodName": "uploadPetImage",
+          "operationId": "uploadFile",
+          "domain": "pet",
+          "description": "POST /pet/{petId}/uploadImage",
+          "javadoc": "The contract exposes no JSON request body for this operation (it is a raw binary upload), so this call sends no body -- it exercises the endpoint and status code, not file content.",
+          "expectedStatus": 200,
+          "dependsOn": ["p4"],
+          "groups": ["workflow", "pet"],
+          "spec": "spec",
+          "request": { "pathParams": { "petId": "{{petId}}" }, "queryParams": { "additionalMetadata": "forge-upload" } }
+        },
+        {
+          "stepId": "p6",
+          "methodName": "deletePet",
+          "operationId": "deletePet",
+          "domain": "pet",
+          "description": "DELETE /pet/{petId} removes the pet this run created",
+          "javadoc": "Deletes only the pet this run created. The contract declares no response schema here, so the schema assertion is switched off rather than asserted against nothing.",
+          "expectedStatus": 200,
+          "assertSchema": false,
+          "dependsOn": ["p5"],
+          "destructive": true,
+          "cleanupFor": "p1",
+          "groups": ["workflow", "pet"],
+          "spec": "spec",
+          "request": { "pathParams": { "petId": "{{petId}}" } }
+        }
+      ]
+    },
+    {
+      "name": "order-lifecycle",
+      "className": "OrderLifecycle",
+      "description": "place -> fetch -> delete. The order id is chained from the create response.",
+      "destructive": true,
+      "steps": [
+        {
+          "stepId": "o1",
+          "methodName": "placeOrder",
+          "operationId": "placeOrder",
+          "domain": "store",
+          "description": "POST /store/order places the order the rest of the flow uses",
+          "expectedStatus": 200,
+          "destructive": true,
+          "groups": ["smoke", "workflow", "store"],
+          "spec": "spec",
+          "request": { "pojo": "NewOrderRequest" },
+          "assertions": [{ "jsonPath": "id", "operator": "notNull" }],
+          "extract": [{ "variable": "orderId", "kind": "body", "expr": "id", "javaType": "Long" }]
+        },
+        {
+          "stepId": "o2",
+          "methodName": "fetchOrder",
+          "operationId": "getOrderById",
+          "domain": "store",
+          "description": "GET /store/order/{orderId} reads back what place returned",
+          "expectedStatus": 200,
+          "dependsOn": ["o1"],
+          "groups": ["smoke", "workflow", "store"],
+          "spec": "spec",
+          "request": { "pathParams": { "orderId": "{{orderId}}" } },
+          "assertions": [{ "jsonPath": "id", "operator": "equals", "expected": "{{orderId}}" }]
+        },
+        {
+          "stepId": "o3",
+          "methodName": "deleteOrder",
+          "operationId": "deleteOrder",
+          "domain": "store",
+          "description": "DELETE /store/order/{orderId} removes the order this run placed",
+          "javadoc": "The contract declares no response schema here, so the schema assertion is switched off rather than asserted against nothing.",
+          "expectedStatus": 200,
+          "assertSchema": false,
+          "dependsOn": ["o2"],
+          "destructive": true,
+          "cleanupFor": "o1",
+          "groups": ["workflow", "store"],
+          "spec": "spec",
+          "request": { "pathParams": { "orderId": "{{orderId}}" } }
+        }
+      ]
+    },
+    {
+      "name": "user-lifecycle",
+      "className": "UserLifecycle",
+      "description": "create -> fetch -> update -> login -> logout -> delete. username is generated fresh per run (this is a shared public demo server) and chained from the create response so the flow never collides with another run.",
+      "destructive": true,
+      "steps": [
+        {
+          "stepId": "u1",
+          "methodName": "createUser",
+          "operationId": "createUser",
+          "domain": "user",
+          "description": "POST /user creates the user the rest of the flow uses",
+          "expectedStatus": 200,
+          "destructive": true,
+          "groups": ["smoke", "workflow", "user"],
+          "spec": "spec",
+          "request": { "pojo": "NewUserRequest" },
+          "assertions": [{ "jsonPath": "username", "operator": "notNull" }],
+          "extract": [{ "variable": "username", "kind": "body", "expr": "username", "javaType": "String" }]
+        },
+        {
+          "stepId": "u2",
+          "methodName": "fetchUser",
+          "operationId": "getUserByName",
+          "domain": "user",
+          "description": "GET /user/{username} reads back what create wrote",
+          "expectedStatus": 200,
+          "dependsOn": ["u1"],
+          "groups": ["smoke", "workflow", "user"],
+          "spec": "spec",
+          "request": { "pathParams": { "username": "{{username}}" } },
+          "assertions": [{ "jsonPath": "username", "operator": "equals", "expected": "{{username}}" }]
+        },
+        {
+          "stepId": "u3",
+          "methodName": "updateUser",
+          "operationId": "updateUser",
+          "domain": "user",
+          "description": "PUT /user/{username} updates the user's name",
+          "javadoc": "The contract declares no response schema here, so the schema assertion is switched off rather than asserted against nothing.",
+          "expectedStatus": 200,
+          "assertSchema": false,
+          "dependsOn": ["u2"],
+          "destructive": true,
+          "groups": ["workflow", "user"],
+          "spec": "spec",
+          "request": { "pojo": "UpdateUserRequest", "pathParams": { "username": "{{username}}" }, "body": { "username": "{{username}}" } }
+        },
+        {
+          "stepId": "u4",
+          "methodName": "loginUser",
+          "operationId": "loginUser",
+          "domain": "user",
+          "description": "GET /user/login logs the user in",
+          "expectedStatus": 200,
+          "dependsOn": ["u3"],
+          "groups": ["workflow", "user"],
+          "spec": "spec",
+          "request": { "queryParams": { "username": "{{username}}", "password": "{{cfg:user.password}}" } },
+          "assertions": [{ "jsonPath": "$", "operator": "notNull" }]
+        },
+        {
+          "stepId": "u5",
+          "methodName": "logoutUser",
+          "operationId": "logoutUser",
+          "domain": "user",
+          "description": "GET /user/logout logs the current user out",
+          "javadoc": "The contract declares no response schema here, so the schema assertion is switched off rather than asserted against nothing.",
+          "expectedStatus": 200,
+          "assertSchema": false,
+          "dependsOn": ["u4"],
+          "groups": ["workflow", "user"],
+          "spec": "spec"
+        },
+        {
+          "stepId": "u6",
+          "methodName": "deleteUser",
+          "operationId": "deleteUser",
+          "domain": "user",
+          "description": "DELETE /user/{username} removes the user this run created",
+          "javadoc": "The contract declares no response schema here, so the schema assertion is switched off rather than asserted against nothing.",
+          "expectedStatus": 200,
+          "assertSchema": false,
+          "dependsOn": ["u5"],
+          "destructive": true,
+          "cleanupFor": "u1",
+          "groups": ["workflow", "user"],
+          "spec": "spec",
+          "request": { "pathParams": { "username": "{{username}}" } }
+        }
+      ]
+    }
+  ]
+}

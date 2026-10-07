@@ -1,0 +1,19 @@
+target/
+.idea/
+*.iml
+.vscode/
+
+# Local credentials — never commit.
+src/test/resources/env/local.properties
+src/test/resources/env/*.local.properties
+
+# Generator staging area
+.api-forge-staging/
+
+# Probe audit log — contains URLs hit against a real environment
+.api-forge-probe.log
+
+# Ingest output is regenerable, BUT the generator needs endpoints.json. Commit it
+# (uncomment the negation) or re-ingest from source.specPath before generating.
+.api-forge/
+!.api-forge/endpoints.json
